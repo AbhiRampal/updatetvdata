@@ -36,8 +36,8 @@ import org.xml.sax.SAXException;
 public class UploadDownloadFile {
 	
 	public static final String NZEPG_URL = "http://nzepg.org/freeview.xml.gz";
-	public static final String FREEVIEW_XML = "/Users/abhirampal/Desktop/freeview.xml";
-	public static final String PARTIAL_XML = "/Users/abhirampal/Desktop/partial.xml";
+	public static final String FREEVIEW_XML = "/freeview.xml";
+	public static final String PARTIAL_XML = "/partial.xml";
 
 	private static void downloadXmlToLocalMachine() {
 		try {
