@@ -1,3 +1,5 @@
+package com.rampal.abhi.updatetvdata;
+
 import java.io.BufferedInputStream;
 import java.io.File;
 import java.io.FileInputStream;
@@ -36,8 +38,9 @@ import org.xml.sax.SAXException;
 public class UploadDownloadFile {
 	
 	public static final String NZEPG_URL = "http://nzepg.org/freeview.xml.gz";
-	public static final String FREEVIEW_XML = "/freeview.xml";
-	public static final String PARTIAL_XML = "/partial.xml";
+	public static final String FREEVIEW_XML = "freeview.xml";
+	public static final String PARTIAL_XML = "partial.xml";
+	public static final String LOGIN_PROPERTIES = "login.properties";
 
 	private static void downloadXmlToLocalMachine() {
 		try {
@@ -52,7 +55,10 @@ public class UploadDownloadFile {
 
 			InputSource is = new InputSource(stream);
 			InputStream input = new BufferedInputStream(is.getByteStream());
-
+			File file = new File(FREEVIEW_XML);
+			if(!file.exists()) {
+			    file.createNewFile();
+			} 
 			OutputStream output = new FileOutputStream(FREEVIEW_XML);
 
 			byte data[] = new byte[3000000];
@@ -75,7 +81,7 @@ public class UploadDownloadFile {
 		}
 	}
 
-	private static void removeSelectedElements(File sourceFile, int num) {
+	/*private static void removeSelectedElements(File sourceFile, int num) {
 		try {
 			DocumentBuilder builder2 = DocumentBuilderFactory.newInstance().newDocumentBuilder();
 			
@@ -108,9 +114,43 @@ public class UploadDownloadFile {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
-	}
+	}*/
 
-	public static void remove(NodeList nList, Document sourceDom,File sourceFile, int num) {
+	private static void removeSelectedElements(File sourceFile) {
+	try {
+		DocumentBuilder builder2 = DocumentBuilderFactory.newInstance().newDocumentBuilder();
+		
+		Document sourceDom = builder2.parse(new InputSource(new FileReader(sourceFile)));
+		sourceDom.getDocumentElement().normalize();
+
+		NodeList nList = sourceDom.getElementsByTagName("programme");
+		System.out.println("Total nodes: "+ nList.getLength());
+		int totalNodesBefore = nList.getLength();
+		int totalNodesAfter = 0;
+		while (totalNodesBefore != totalNodesAfter){
+			totalNodesBefore = sourceDom.getElementsByTagName("programme").getLength();
+			remove(nList, sourceDom, sourceFile);
+			totalNodesAfter = sourceDom.getElementsByTagName("programme").getLength();
+		}
+		sourceDom.getDocumentElement().normalize();
+		sourceDom.normalize();
+		System.out.println(sourceDom.getElementsByTagName("programme").getLength()+ " nodes remaining");
+		
+	} catch (ParserConfigurationException e) {
+		// TODO Auto-generated catch block
+		e.printStackTrace();
+	} catch (FileNotFoundException e) {
+		// TODO Auto-generated catch block
+		e.printStackTrace();
+	} catch (SAXException e) {
+		// TODO Auto-generated catch block
+		e.printStackTrace();
+	} catch (IOException e) {
+		// TODO Auto-generated catch block
+		e.printStackTrace();
+	}
+}
+	/*public static void remove(NodeList nList, Document sourceDom,File sourceFile, int num) {
 		Calendar cal = Calendar.getInstance();
 		
 		for (int i = 0; i < nList.getLength();) {
@@ -137,8 +177,37 @@ public class UploadDownloadFile {
 			}
 			i++;
 		}
-	}
+	}*/
 	
+	public static void remove(NodeList nList, Document sourceDom,File sourceFile) {
+		Calendar cal = Calendar.getInstance();
+		
+		for (int i = 0; i < nList.getLength();) {
+			Node node = nList.item(i);
+			Element e = (Element) node;
+			if (e.getNodeType() == Node.ELEMENT_NODE) {
+				Calendar startDate = getDateFromXML(e.getAttribute("start"));
+				Calendar endDate = getDateFromXML(e.getAttribute("stop"));
+				if (cal.get(Calendar.YEAR) == startDate.get(Calendar.YEAR) && cal.get(Calendar.YEAR) == endDate.get(Calendar.YEAR)
+						&& (cal.get(Calendar.MONTH) == startDate.get(Calendar.MONTH) && cal.get(Calendar.MONTH) == endDate.get(Calendar.MONTH)||
+								cal.get(Calendar.MONTH) != startDate.get(Calendar.MONTH) && cal.get(Calendar.MONTH) != endDate.get(Calendar.MONTH))
+						&& cal.get(Calendar.DAY_OF_MONTH) != startDate.get(Calendar.DAY_OF_MONTH)
+						&& cal.get(Calendar.DAY_OF_MONTH) != endDate.get(Calendar.DAY_OF_MONTH)) {
+	
+					removeAll(node, "programme");
+					TransformerFactory tf = TransformerFactory.newInstance();
+					try {
+						Transformer t = tf.newTransformer();
+						t.transform(new DOMSource(sourceDom), new StreamResult(sourceFile));
+					} catch (TransformerException ef) {
+						// TODO Auto-generated catch block
+						ef.printStackTrace();
+					}
+				} 
+			}
+			i++;
+		}
+	}
 	public static void removeAll(Node node, String name) {
 		if ((name == null || node.getNodeName().equals(name))) {
 			node.getParentNode().removeChild(node);
@@ -169,14 +238,14 @@ public class UploadDownloadFile {
 		return cal;
 	}
 
-	public static void FTPUpload(int num) {
+	/*public static void FTPUpload(int num) {
 		FTPClient client = new FTPClient();
 		FileInputStream fis = null;
 
 		try {
 			client.connect("homepages.slingshot.co.nz");
 			Properties p = new Properties();
-			p.load(new FileInputStream("login.properties"));
+			p.load(new FileInputStream(LOGIN_PROPERTIES));
 			client.login(p.getProperty("username"), p.getProperty("password"));
 
 			String filename = FREEVIEW_XML;
@@ -198,18 +267,57 @@ public class UploadDownloadFile {
 				e.printStackTrace();
 			}
 		}
+	}*/
+
+	public static void FTPUpload() {
+		FTPClient client = new FTPClient();
+		FileInputStream fis = null;
+
+		try {
+			client.connect("homepages.slingshot.co.nz");
+			Properties p = new Properties();
+			p.load(new FileInputStream(LOGIN_PROPERTIES));
+			client.login(p.getProperty("username"), p.getProperty("password"));
+
+			String filename = FREEVIEW_XML;
+			fis = new FileInputStream(filename);
+			//String fileName = "programData"+getDateString(new Date())+".xml";
+			String fileName = "programData.xml";
+			System.out.println(fileName);
+			client.storeFile("/public_html/"+fileName, fis);
+			
+			client.logout();
+		} catch (IOException e) {
+			e.printStackTrace();
+		} finally {
+			try {
+				if (fis != null) {
+					fis.close();
+				}
+				client.disconnect();
+			} catch (IOException e) {
+				e.printStackTrace();
+			}
+		}
 	}
 
-	private static String getDateString(Date date, int num){
+	private static String getDateString(Date date){
 		Calendar cal = Calendar.getInstance();
-		cal.add(Calendar.DAY_OF_MONTH, num);
 		String day = String.valueOf(cal.get(Calendar.DAY_OF_MONTH));
 		String month = String.valueOf(cal.get(Calendar.MONTH));
 		String year = String.valueOf(cal.get(Calendar.YEAR));
 		return day+month+year;
 	}
 	
-	public static void main(String[] args) throws SAXException, IOException, ParserConfigurationException {
+	/*private static String getDateString(Date date, int num){
+		Calendar cal = Calendar.getInstance();
+		cal.add(Calendar.DAY_OF_MONTH, num);
+		String day = String.valueOf(cal.get(Calendar.DAY_OF_MONTH));
+		String month = String.valueOf(cal.get(Calendar.MONTH));
+		String year = String.valueOf(cal.get(Calendar.YEAR));
+		return day+month+year;
+	}*/
+	/*public static void main(String[] args) throws SAXException, IOException, ParserConfigurationException {
 		for (int i=0; i<6; i++){
 			System.out.println("Starting file donwload...");
 			downloadXmlToLocalMachine();
@@ -217,7 +325,16 @@ public class UploadDownloadFile {
 			File file = new File(FREEVIEW_XML);
 			removeSelectedElements(file, i);
 			FTPUpload(i);
-		}
-		
+		}	
+	}*/
+	
+	public static void main(String[] args) throws SAXException, IOException, ParserConfigurationException {
+
+			System.out.println("Starting file donwload...");
+			downloadXmlToLocalMachine();
+			System.out.println("File download finished..");
+			File file = new File(FREEVIEW_XML);
+			removeSelectedElements(file);
+			FTPUpload();
 	}
 }
