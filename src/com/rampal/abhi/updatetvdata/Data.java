@@ -35,14 +35,14 @@ import org.w3c.dom.NodeList;
 import org.xml.sax.InputSource;
 import org.xml.sax.SAXException;
 
-public class UploadDownloadFile {
+public class Data {
 	
 	public static final String NZEPG_URL = "http://nzepg.org/freeview.xml.gz";
 	public static final String FREEVIEW_XML = "freeview.xml";
 	public static final String PARTIAL_XML = "partial.xml";
 	public static final String LOGIN_PROPERTIES = "login.properties";
 
-	private static void downloadXmlToLocalMachine() {
+	private static void downloadXml() {
 		try {
 			URL url = new URL(NZEPG_URL);
 			URLConnection connection = url.openConnection();
@@ -75,7 +75,7 @@ public class UploadDownloadFile {
 			e.printStackTrace();
 		} catch (UnknownHostException e) {
 			System.out.println("Unknown Host Exception...");
-			downloadXmlToLocalMachine();
+			downloadXml();
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
@@ -331,7 +331,7 @@ public class UploadDownloadFile {
 	public static void main(String[] args) throws SAXException, IOException, ParserConfigurationException {
 
 			System.out.println("Starting file donwload...");
-			downloadXmlToLocalMachine();
+			downloadXml();
 			System.out.println("File download finished..");
 			File file = new File(FREEVIEW_XML);
 			removeSelectedElements(file);
